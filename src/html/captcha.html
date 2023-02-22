@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0, viewport-fit=cover" />
+  <script src="https://g.alicdn.com/AWSC/AWSC/awsc.js"></script>
+  <style>
+    *:not(input, textarea) {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      /* Disable selection/Copy of UIWebView */
+    }
+
+    html,
+    body {
+      margin: 0px;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+        "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+        "Helvetica Neue", sans-serif;
+    }
+
+    .sm-btn-default:hover,
+    .sm-btn-success:hover,
+    .sm-btn-loading:hover,
+    .sm-btn-fail:hover {
+      -moz-box-shadow: 0px 0px 0px #ffffff !important;
+      -webkit-box-shadow: 0px 0px 0px #ffffff !important;
+      box-shadow: 0px 0px 0px #ffffff !important;
+    }
+
+    /* 验证按钮宽度自适应 */
+    .nc-container #nc_1_wrapper {
+      width: 100vw !important;
+    }
+
+    .sm-btn-wrapper .sm-btn,
+    .sm-btn-wrapper #sm-btn-bg {
+      width: calc(100vw - 2px) !important;
+    }
+
+    .sm-btn-wrapper #rectMask {
+      width: 100vw !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="captcha_button"></div>
+  <script type="text/javascript">
+    const bridgeMethod = (method, data) => {
+      if (window.webkit) {
+        window.webkit.messageHandlers[method].postMessage(data);
+      } else if (window.messageHandlers) {
+        window.messageHandlers[method](JSON.stringify(data));
+      } else {
+        console.log(method, data);
+      }
+    };
+
+    const bridgeOnSuccess = (data) => bridgeMethod("onSuccess", data);
+    const bridgeOnFailure = (data) => bridgeMethod("onFailure", data);
+    const bridgeOnError = (data) => bridgeMethod("onError", data);
+
+    const init = (type, size = {}, optionJsonString, customStyle) => {
+      let option = JSON.parse(optionJsonString);
+      option = Object.assign(option, size, {
+        renderTo: "captcha_button",
+        success: (data) => {
+          window.ReactNativeWebView.postMessage(JSON.stringify(data));
+        },
+        fail: (failCode) => {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ "onFailure": failCode }));
+        },
+        error: (errorCode) => {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ "onError": errorCode }));
+        },
+      });
+      if (type === "ic" && option.height) {
+        option.height -= 2;
+      }
+
+      AWSC.use(type, (state, module) => {
+        // window.captcha_button = module.init(option);
+        window.captcha_button = module.init({
+          // 应用类型标识。它和使用场景标识（scene字段）一起决定了滑动验证的业务场景与后端对应使用的策略模型。您可以在阿里云验证码控制台的配置管理页签找到对应的appkey字段值，请务必正确填写。
+          appkey: option.appKey,
+          //使用场景标识。它和应用类型标识（appkey字段）一起决定了滑动验证的业务场景与后端对应使用的策略模型。您可以在阿里云验证码控制台的配置管理页签找到对应的scene值，请务必正确填写。
+          scene: option.scene,
+          // 声明滑动验证需要渲染的目标ID。
+          renderTo: "captcha_button",
+          //前端滑动验证通过时会触发该回调参数。您可以在该回调参数中将会话ID（sessionId）、签名串（sig）、请求唯一标识（token）字段记录下来，随业务请求一同发送至您的服务端调用验签。
+          success: (data) => {
+            window.console && console.log(data.sessionId)
+            window.console && console.log(data.sig)
+            window.console && console.log(data.token)
+            window.ReactNativeWebView.postMessage(JSON.stringify(data));
+          },
+          // 滑动验证失败时触发该回调参数。
+          fail: (failCode) => {
+            window.console && console.log(failCode)
+            bridgeOnFailure({ failCode });
+          },
+          // 验证码加载出现异常时触发该回调参数。
+          error: (errorCode) => {
+            window.console && console.log(errorCode)
+            bridgeOnError({ errorCode });
+          }
+        });
+      });
+
+      setTimeout(() => {
+        const styleNode = document.createElement("style");
+        const styleText = document.createTextNode(`
+          .nc_scale {
+            height: ${option.height}px !important;
+          }
+          .nc_scale span {
+            height: ${option.height - 2}px !important;
+            line-height: ${option.height - 2}px !important;
+          }
+          .nc-container .nc_wrapper .errloading {
+            padding: 0px 5px;
+            height: ${option.height - 2}px !important;
+            line-height: ${option.height - 2}px !important;
+          }
+          ${customStyle || ""}
+        `);
+        styleNode.type = "text/css";
+        styleNode.appendChild(styleText);
+        document.getElementsByTagName("body")[0].appendChild(styleNode);
+      }, 100);
+    };
+
+    window._init = init;
+  </script>
+</body>
+
+</html>
